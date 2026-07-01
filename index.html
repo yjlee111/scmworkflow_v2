@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>SCM Workflow Dashboard (Step_Definition_1)</title>
+<style>
+:root{
+  --color-background-primary:#ffffff;
+  --color-background-secondary:#f9fafb;
+  --color-text-primary:#111827;
+  --color-text-secondary:#4b5563;
+  --color-text-tertiary:#9ca3af;
+  --color-border-primary:#d1d5db;
+  --color-border-secondary:#e5e7eb;
+  --color-border-tertiary:#f3f4f6;
+  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font-sans);background:var(--color-background-primary);}
+
+.page-header{background:var(--color-background-primary);border-bottom:1px solid var(--color-border-tertiary);padding:12px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.ph-logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#4338CA,#6366F1);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.ph-text{flex-shrink:0;}
+.ph-title{font-size:17px;font-weight:700;color:var(--color-text-primary);letter-spacing:-0.2px;}
+.ph-sub{font-size:11px;color:var(--color-text-secondary);margin-top:1px;}
+.ph-search{flex:1;max-width:280px;min-width:160px;display:flex;align-items:center;gap:8px;background:var(--color-background-secondary);border:1px solid #D1D5DB;border-radius:8px;padding:6px 12px;}
+.ph-search input{border:none;background:transparent;outline:none;font-size:12px;color:var(--color-text-primary);width:100%;font-family:inherit;}
+.ph-search input::placeholder{color:var(--color-text-tertiary);}
+.ph-search-icon{font-size:13px;color:var(--color-text-tertiary);flex-shrink:0;}
+.ph-stats{display:flex;align-items:center;gap:6px;margin-left:auto;flex-wrap:wrap;}
+.ph-stat{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:8px;border:0.5px solid var(--color-border-secondary);font-size:11px;font-weight:500;color:var(--color-text-primary);white-space:nowrap;}
+.ph-sync{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--color-text-tertiary);white-space:nowrap;}
+.ph-sync-dot{width:6px;height:6px;border-radius:50%;background:#22C55E;flex-shrink:0;}
+.reload-btn{width:28px;height:28px;border-radius:6px;border:0.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;font-size:14px;color:var(--color-text-secondary);}
+.reload-btn:hover{background:var(--color-background-secondary);}
+
+/* ── 필터바 ── */
+.filter-bar{position:sticky;top:0;z-index:400;background:var(--color-background-primary);border-bottom:1px solid var(--color-border-tertiary);}
+.filter-row{display:flex;align-items:center;gap:8px;padding:7px 20px;flex-wrap:wrap;}
+.f-label{font-size:12px;font-weight:700;color:var(--color-text-primary);white-space:nowrap;flex-shrink:0;}
+.f-divider{width:1px;height:20px;background:var(--color-border-secondary);flex-shrink:0;margin:0 4px;}
+
+.tag-btn{
+  padding:4px 13px;border-radius:20px;
+  border:1px solid #D1D5DB;
+  font-size:12px;cursor:pointer;
+  background:#F3F4F6;
+  color:#374151;
+  font-weight:500;
+  transition:all .15s;white-space:nowrap;
+}
+.tag-btn:hover{background:#E5E7EB;border-color:#9CA3AF;}
+.tag-btn.ap{background:#4338CA;color:#fff;border-color:#4338CA;}
+.tag-btn.ac{background:#047857;color:#fff;border-color:#047857;}
+
+.reset-btn{
+  padding:4px 12px;border-radius:20px;
+  border:1px solid #D1D5DB;
+  font-size:12px;cursor:pointer;
+  background:#F3F4F6;color:#374151;
+  font-weight:500;
+  margin-left:auto;
+  display:flex;align-items:center;gap:4px;
+}
+.reset-btn:hover{background:#E5E7EB;}
+
+/* ── 메인 레이아웃 ── */
+.main-layout{display:flex;position:relative;}
+.board-area{flex:1;min-width:0;}
+
+.side-panel{width:0;overflow:hidden;transition:width .3s ease;border-left:0.5px solid var(--color-border-tertiary);background:var(--color-background-primary);flex-shrink:0;position:sticky;top:0;height:calc(100vh - 40px);overflow-y:auto;}
+.side-panel.open{width:340px;}
+.sp-header{display:flex;align-items:flex-start;justify-content:space-between;padding:16px 16px 12px;border-bottom:0.5px solid var(--color-border-tertiary);position:sticky;top:0;z-index:10;background:var(--color-background-primary);}
+.sp-id{font-size:10px;font-family:monospace;color:var(--color-text-tertiary);margin-bottom:4px;}
+.sp-title{font-size:17px;font-weight:700;color:var(--color-text-primary);line-height:1.3;}
+.sp-close{width:28px;height:28px;border-radius:50%;border:0.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;font-size:14px;color:var(--color-text-secondary);flex-shrink:0;margin-left:8px;}
+.sp-close:hover{background:var(--color-background-secondary);}
+.sp-body{padding:16px;}
+.sp-section{margin-bottom:20px;}
+.sp-section-label{font-size:10px;font-weight:600;letter-spacing:0.08em;color:var(--color-text-tertiary);text-transform:uppercase;margin-bottom:8px;}
+.sp-dept{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;color:var(--color-text-primary);}
+.sp-dept-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.sp-badge{display:inline-block;font-size:10px;padding:3px 9px;border-radius:4px;font-weight:500;}
+.sp-b-START{background:#D1FAE5;color:#065F46;}
+.sp-b-PROCESS{background:#EDE9FE;color:#4C1D95;}
+.sp-b-END{background:#FEE2E2;color:#7F1D1D;}
+.sp-stepdef{background:var(--color-background-secondary);border-left:3px solid #4338CA;border-radius:0 8px 8px 0;padding:12px 14px;font-size:12px;color:var(--color-text-primary);line-height:1.8;white-space:pre-wrap;word-break:keep-all;}
+.sp-tags{display:flex;flex-wrap:wrap;gap:6px;}
+.sp-tag{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500;}
+.sp-tag.prod{background:#EDE9FE;color:#4C1D95;}
+.sp-tag.chan{background:#E0F2FE;color:#075985;}
+.sp-deps{display:flex;gap:10px;}
+.sp-dep-box{flex:1;background:var(--color-background-secondary);border-radius:8px;padding:10px 12px;}
+.sp-dep-label{font-size:10px;color:var(--color-text-tertiary);margin-bottom:6px;}
+.sp-dep-item{font-size:11px;font-weight:500;color:var(--color-text-primary);line-height:1.6;padding:3px 0;border-bottom:0.5px solid var(--color-border-tertiary);}
+.sp-dep-item:last-child{border-bottom:none;}
+.sp-dep-item-id{font-family:monospace;font-size:10px;color:var(--color-text-tertiary);}
+.sp-dep-none{font-size:12px;color:var(--color-text-tertiary);}
+
+/* ── 카드 ── */
+.step-card{border-radius:8px;padding:8px 10px;background:#ffffff;border:1px solid var(--color-border-secondary);box-shadow:0 1px 3px rgba(0,0,0,0.08);cursor:pointer;transition:opacity .2s,box-shadow .15s,transform .15s;}
+.step-card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.14);transform:translateY(-1px);}
+.step-card.dimmed{opacity:0.18;pointer-events:none;}
+.step-card.highlighted{box-shadow:0 0 0 2px #4338CA;border-color:#4338CA;}
+.step-card.selected{box-shadow:0 0 0 2px #F59E0B;border-color:#F59E0B;}
+.step-card.search-match{box-shadow:0 0 0 2px #22C55E;border-color:#22C55E;}
+.step-card.hover-focus{box-shadow:0 0 0 2px #DC2626;border-color:#DC2626;}
+.s-id{font-size:9px;font-family:monospace;color:var(--color-text-tertiary);margin-bottom:2px;display:none;}
+.s-name{font-size:11px;font-weight:600;line-height:1.4;color:var(--color-text-primary);}
+.s-name mark{background:#FEF08A;color:#1a1a1a;border-radius:2px;padding:0 1px;}
+.s-tags{display:flex;flex-wrap:wrap;gap:3px;margin-top:5px;}
+.s-tag{font-size:8px;padding:1px 5px;border-radius:8px;}
+.s-tag.prod{background:#EDE9FE;color:#4C1D95;}
+.s-tag.chan{background:#E0F2FE;color:#075985;display:none;}
+.badge{display:inline-block;font-size:8px;padding:1px 5px;border-radius:3px;margin-bottom:3px;font-weight:500;}
+.b-START{background:#D1FAE5;color:#065F46;}
+.b-PROCESS{background:#EDE9FE;color:#4C1D95;}
+.b-END{background:#FEE2E2;color:#7F1D1D;}
+
+.legend{display:flex;gap:14px;padding:7px 20px;flex-wrap:wrap;border-top:0.5px solid var(--color-border-tertiary);align-items:center;}
+.li{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--color-text-secondary);}
+.ld{width:10px;height:10px;border-radius:2px;}
+</style>
+</head>
+<body>
+<div id="root">
+  <div class="page-header">
+    <div class="ph-logo">📊</div>
+    <div class="ph-text">
+      <div class="ph-title">SCM Workflow Dashboard <span style="font-size:11px;color:#4338CA;font-weight:600;">v2 · Step_Definition_1</span></div>
+      <div class="ph-sub">사업지원실 SCM 업무 프로세스</div>
+    </div>
+    <div class="ph-search">
+      <span class="ph-search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="업무명 검색..." oninput="onSearch()">
+    </div>
+    <div class="ph-stats">
+      <div class="ph-stat">≡ <span id="stepCount">—</span> Step</div>
+      <div class="ph-stat">👤 <span id="deptCount">—</span> 부서</div>
+      <div class="ph-stat">⊞ <span id="groupCount">—</span> 그룹</div>
+      <div class="ph-sync"><div class="ph-sync-dot"></div>Last Sync <span id="lastUpd">—</span></div>
+      <button class="reload-btn" onclick="loadData()">↻</button>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <div class="filter-row">
+      <span class="f-label">출고</span>
+      <div class="f-divider"></div>
+      <div id="pf" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+      <div class="f-divider"></div>
+      <span class="f-label">채널</span>
+      <div class="f-divider"></div>
+      <div id="cf" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+      <button class="reset-btn" onclick="reset()">↺ 전체 초기화</button>
+    </div>
+  </div>
+
+  <div class="main-layout">
+    <div class="board-area">
+      <div id="main"></div>
+      <div class="legend">
+        <div class="li"><div class="ld" style="background:#D1FAE5;border:1px solid #065F46"></div>START</div>
+        <div class="li"><div class="ld" style="background:#EDE9FE;border:1px solid #4C1D95"></div>PROCESS</div>
+        <div class="li"><div class="ld" style="background:#FEE2E2;border:1px solid #7F1D1D"></div>END</div>
+        <div class="li" style="margin-left:auto;font-size:10px;color:var(--color-text-tertiary)">카드에 마우스를 올리면 연결된 화살표만 강조됩니다 · 클릭 시 상세 보기</div>
+      </div>
+    </div>
+    <div class="side-panel" id="sidePanel">
+      <div class="sp-header">
+        <div>
+          <div class="sp-id" id="spId"></div>
+          <div class="sp-title" id="spTitle"></div>
+        </div>
+        <button class="sp-close" onclick="closePanel()">✕</button>
+      </div>
+      <div class="sp-body" id="spBody"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_URL='https://script.google.com/macros/s/AKfycbxvpfwIZQDfDM_ZiJuzAspmQBN7hNNt-hwWSAucM8qAQXDPyagS9COhNJx5GW5RmYll/exec';
+const LANE_COLORS={
+  '사업전략팀':  {bg:'#3730A3',text:'#fff',dot:'#818CF8',cell:'#EEF2FF'},
+  '사업지원팀':  {bg:'#065F46',text:'#fff',dot:'#34D399',cell:'#ECFDF5'},
+  '사업기획팀':  {bg:'#7C2D12',text:'#fff',dot:'#FB923C',cell:'#FFF7ED'},
+  '생산관리지원팀':{bg:'#1E40AF',text:'#fff',dot:'#60A5FA',cell:'#EFF6FF'},
+};
+const DEFAULT_LANE={bg:'#374151',text:'#fff',dot:'#9CA3AF',cell:'#F9FAFB'};
+const GRP_COLORS=['#4338CA','#047857','#B45309','#1D4ED8','#92400E','#0E7490','#9A3412','#7C3AED','#374151'];
+
+let steps=[],groups=[],depts=[],groupColors={};
+let activeProd=new Set(),activeChan=new Set();
+let selectedId=null,searchQuery='';
+let hoverId=null; // 마우스오버 중인 카드 (화살표 포커스용)
+
+async function loadData(){
+  document.getElementById('main').innerHTML='<div style="padding:48px;text-align:center;color:var(--color-text-secondary)">⏳ 데이터 불러오는 중...</div>';
+  try{
+    const res=await fetch(API_URL);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const raw=await res.json();
+    parseData(raw);
+    const now=new Date();
+    document.getElementById('lastUpd').textContent=now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('stepCount').textContent=steps.length;
+    document.getElementById('deptCount').textContent=depts.length;
+    document.getElementById('groupCount').textContent=groups.length;
+    buildUI();
+  }catch(e){
+    document.getElementById('main').innerHTML=`<div style="padding:16px;color:#A32D2D;font-size:12px;background:#FCEBEB;border-radius:8px;margin:14px">❌ 로드 실패: ${e.message}</div>`;
+  }
+}
+
+function parseData(raw){
+  let hi=-1;
+  for(let i=0;i<raw.length;i++){if(raw[i].some(c=>String(c).includes('Step_ID'))){hi=i;break;}}
+  if(hi<0) throw new Error('헤더 없음');
+  const HDR=raw[hi].map(h=>String(h||'').replace(/\*/g,'').trim());
+  const col=(...names)=>{
+    for(const n of names){const i=HDR.findIndex(h=>h.toLowerCase()===n.toLowerCase());if(i>=0)return i;}
+    for(const n of names){const i=HDR.findIndex(h=>h.toLowerCase().includes(n.toLowerCase()));if(i>=0)return i;}
+    return -1;
+  };
+  const iID=col('Step_ID'), iName=col('Step_Name'),
+        iGrpName=col('Process_Group_Name'), iGrp=col('Process_Group'),
+        iDept=col('Dept_Name'), iType=col('Step_Type'),
+        iCNship=col('중국 출고','중국출고','China'), iKRship=col('한국 출고','한국출고','Korea'),
+        iChan=col('Chanel_tag','Channel_tag','Chanel','Channel','채널'),
+        iDef=col('Step_Definition','Definition','정의'),
+        iPrev=col('Prev_Step_ID','Prev','이전'), iNext=col('Next_Step_ID','Next','다음'),
+        iCol=col('Col_Order'), iRow=col('Row_Order'),
+        iInSide=col('받는 화살표','받는화살표','받는','In_Arrow'),
+        iOutSide=col('보내는 화살표','보내는화살표','보내는','Out_Arrow');
+  console.log('[컬럼 매핑]',{iID,iName,iGrpName,iGrp,iDept,iType,iCNship,iKRship,iChan,iDef,iPrev,iNext,iCol,iRow,iInSide,iOutSide});
+  const split=v=>String(v||'').split(/[,，\s]+/).map(s=>s.trim()).filter(Boolean);
+  const splitComma=v=>String(v||'').split(/[,，]+/).map(s=>s.trim()).filter(Boolean);
+  const toInt=v=>{const n=parseInt(String(v||'').trim());return isNaN(n)?null:n;};
+  const clean=v=>String(v||'').trim();
+  const SIDE_MAP={'위':'top','상':'top','top':'top','t':'top','up':'top','u':'top','▲':'top','↑':'top',
+                  '아래':'bottom','하':'bottom','bottom':'bottom','b':'bottom','down':'bottom','d':'bottom','▼':'bottom','↓':'bottom',
+                  '좌':'left','왼':'left','왼쪽':'left','left':'left','l':'left','◀':'left','←':'left',
+                  '우':'right','오':'right','오른':'right','오른쪽':'right','right':'right','r':'right','▶':'right','→':'right'};
+  const toSide=v=>{const k=clean(v);return SIDE_MAP[k]||SIDE_MAP[k.toLowerCase()]||null;};
+  const isYes=v=>{const t=clean(v).toUpperCase();return !!t&&!['X','-','N','NO','0','FALSE'].includes(t);};
+  steps=[];
+  for(let i=hi+1;i<raw.length;i++){
+    const row=raw[i];
+    const id=clean(row[iID]);
+    if(!id.match(/^S\d+/)) continue;
+    steps.push({
+      id,name:clean(row[iName]),
+      g:clean(row[iGrpName])||clean(row[iGrp])||'(skip)',
+      dept:clean(row[iDept]),type:clean(row[iType])||'PROCESS',
+      prod:[...(isYes(row[iCNship])?['중국']:[]),...(isYes(row[iKRship])?['한국']:[])],
+      chan:splitComma(row[iChan]),
+      cnShip:clean(row[iCNship]),krShip:clean(row[iKRship]),
+      definition:clean(row[iDef]),
+      prev:split(row[iPrev]),next:split(row[iNext]),
+      colOrder:toInt(row[iCol]),rowOrder:toInt(row[iRow]),
+      inSide:toSide(row[iInSide]),outSide:toSide(row[iOutSide]), // 시트에 값이 있으면 이 값을 우선 사용, 없으면 자동 계산
+    });
+  }
+  const go=[];steps.forEach(s=>{if(!go.includes(s.g))go.push(s.g);});
+  groups=go.filter(g=>g!=='(skip)');
+  groups.forEach((g,i)=>{groupColors[g]=GRP_COLORS[i%GRP_COLORS.length];});
+  const DEPT_ORDER=['사업전략팀','사업지원팀','생산관리지원팀','사업기획팀'];
+  const deptOrder=[];steps.forEach(s=>{if(s.dept&&!deptOrder.includes(s.dept))deptOrder.push(s.dept);});
+  const extra=deptOrder.filter(d=>!DEPT_ORDER.includes(d));
+  depts=[...DEPT_ORDER.filter(d=>deptOrder.includes(d)),...extra];
+  assignColRow();
+}
+
+function assignColRow(){
+  groups.forEach(g=>{
+    const gSteps=steps.filter(s=>s.g===g);
+    const colSet=new Set(gSteps.filter(s=>s.colOrder!=null).map(s=>s.colOrder));
+    let ac=1;
+    gSteps.forEach(s=>{
+      if(s.colOrder!=null){s._col=s.colOrder;}
+      else{while(colSet.has(ac))ac++;s._col=ac;colSet.add(ac);ac++;}
+    });
+    depts.forEach(dept=>{
+      const cg={};
+      gSteps.filter(s=>s.dept===dept).forEach(s=>{if(!cg[s._col])cg[s._col]=[];cg[s._col].push(s);});
+      Object.values(cg).forEach(grp=>{
+        const rs=new Set(grp.filter(s=>s.rowOrder!=null).map(s=>s.rowOrder));
+        let ar=1;
+        grp.forEach(s=>{
+          if(s.rowOrder!=null){s._row=s.rowOrder;}
+          else{while(rs.has(ar))ar++;s._row=ar;rs.add(ar);ar++;}
+        });
+      });
+    });
+  });
+}
+
+function matchesFilter(s){
+  if(!activeProd.size&&!activeChan.size) return true;
+  return(activeProd.size===0||s.prod.some(p=>activeProd.has(p)))&&
+        (activeChan.size===0||s.chan.some(c=>activeChan.has(c)));
+}
+function matchesSearch(s){
+  if(!searchQuery) return true;
+  const q=searchQuery.toLowerCase();
+  return s.name.toLowerCase().includes(q)||s.id.toLowerCase().includes(q)||s.definition.toLowerCase().includes(q);
+}
+function getGroupCols(g){
+  return [...new Set(steps.filter(s=>s.g===g).map(s=>s._col))].sort((a,b)=>a-b);
+}
+function onSearch(){
+  searchQuery=document.getElementById('searchInput').value.trim();
+  renderGrid();
+}
+function buildUI(){
+  const allP=[...new Set(steps.flatMap(s=>s.prod))].sort();
+  const allC=[...new Set(steps.flatMap(s=>s.chan))].sort();
+  const pf=document.getElementById('pf');pf.innerHTML='';
+  allP.forEach(p=>{const b=document.createElement('button');b.className='tag-btn';b.textContent=p;b.onclick=()=>tF('p',p,b);pf.appendChild(b);});
+  const cf=document.getElementById('cf');cf.innerHTML='';
+  allC.forEach(c=>{const b=document.createElement('button');b.className='tag-btn';b.textContent=c;b.onclick=()=>tF('c',c,b);cf.appendChild(b);});
+  renderGrid();
+}
+function tF(type,val,btn){
+  const s=type==='p'?activeProd:activeChan,cls=type==='p'?'ap':'ac';
+  s.has(val)?(s.delete(val),btn.classList.remove(cls)):(s.add(val),btn.classList.add(cls));
+  renderGrid();
+}
+function reset(){
+  activeProd.clear();activeChan.clear();
+  searchQuery='';
+  document.getElementById('searchInput').value='';
+  document.querySelectorAll('.tag-btn').forEach(b=>b.classList.remove('ap','ac'));
+  renderGrid();
+}
+function highlight(text,q){
+  if(!q) return text;
+  const idx=text.toLowerCase().indexOf(q.toLowerCase());
+  if(idx<0) return text;
+  return text.slice(0,idx)+'<mark>'+text.slice(idx,idx+q.length)+'</mark>'+text.slice(idx+q.length);
+}
+
+function renderGrid(){
+  const main=document.getElementById('main');main.innerHTML='';
+  const filterActive=activeProd.size>0||activeChan.size>0;
+  const searchActive=!!searchQuery;
+  const HEAD_W=52,CELL_W=175;
+  const grpCols={};groups.forEach(g=>{grpCols[g]=getGroupCols(g);});
+
+  const scrollDiv=document.createElement('div');
+  scrollDiv.style.cssText='overflow:auto;width:100%;';
+  const inner=document.createElement('div');
+  inner.style.cssText='display:inline-block;min-width:100%;';
+  const tbl=document.createElement('table');
+  tbl.style.cssText='border-collapse:collapse;';
+
+  const thead=document.createElement('thead');
+  const hr=document.createElement('tr');
+  const corner=document.createElement('th');
+  corner.style.cssText=`width:${HEAD_W}px;min-width:${HEAD_W}px;position:sticky;left:0;z-index:70;background:var(--color-background-secondary);border-right:0.5px solid var(--color-border-secondary);border-bottom:0.5px solid var(--color-border-secondary);`;
+  hr.appendChild(corner);
+  groups.forEach((g,gi)=>{
+    const th=document.createElement('th');
+    th.colSpan=grpCols[g].length;
+    th.style.cssText=`padding:8px 10px;text-align:center;font-size:11px;font-weight:600;color:#fff;background:${groupColors[g]};border-right:${gi<groups.length-1?'2px solid rgba(255,255,255,0.3)':'none'};border-bottom:0.5px solid rgba(255,255,255,0.2);white-space:nowrap;`;
+    th.textContent=g;
+    hr.appendChild(th);
+  });
+  thead.appendChild(hr);tbl.appendChild(thead);
+
+  const tbody=document.createElement('tbody');
+  depts.forEach(dept=>{
+    const lc=LANE_COLORS[dept]||DEFAULT_LANE;
+    let maxRowCount=1;
+    groups.forEach(g=>{
+      grpCols[g].forEach(col=>{
+        const maxR=Math.max(0,...steps.filter(s=>s.g===g&&s.dept===dept&&s._col===col).map(s=>s._row||1));
+        if(maxR>maxRowCount) maxRowCount=maxR;
+      });
+    });
+    for(let rowIdx=1;rowIdx<=maxRowCount;rowIdx++){
+      const tr=document.createElement('tr');
+      if(rowIdx===1){
+        const headTd=document.createElement('td');
+        headTd.rowSpan=maxRowCount;
+        headTd.style.cssText=`width:${HEAD_W}px;min-width:${HEAD_W}px;background:${lc.bg};color:${lc.text};position:sticky;left:0;z-index:40;writing-mode:vertical-rl;text-orientation:mixed;font-size:11px;font-weight:600;letter-spacing:0.06em;text-align:center;padding:16px 0;border-right:2px solid rgba(255,255,255,0.3);border-bottom:0.5px solid rgba(255,255,255,0.15);`;
+        headTd.textContent=dept;
+        tr.appendChild(headTd);
+      }
+      groups.forEach((g,gi)=>{
+        const cols=grpCols[g];
+        const isLastGrp=gi===groups.length-1;
+        cols.forEach((col,ci2)=>{
+          const isLastCol=ci2===cols.length-1;
+          const td=document.createElement('td');
+          td.style.cssText=`background:${lc.cell};border-right:${isLastCol&&!isLastGrp?'2px solid #e5e7eb':'none'};border-bottom:1px solid #e5e7eb;padding:8px;vertical-align:top;min-height:90px;width:${CELL_W}px;min-width:${CELL_W}px;`;
+          const cellSteps=steps.filter(s=>s.g===g&&s.dept===dept&&s._col===col&&(s._row||1)===rowIdx);
+          if(cellSteps.length){
+            const wrap=document.createElement('div');wrap.style.cssText='display:flex;flex-direction:column;gap:6px;';
+            cellSteps.forEach(step=>{
+              const fMatch=matchesFilter(step);
+              const sMatch=matchesSearch(step);
+              const anyActive=filterActive||searchActive;
+              const card=document.createElement('div');
+              card.className='step-card';card.dataset.id=step.id;
+              if(anyActive&&!(fMatch&&sMatch)) card.classList.add('dimmed');
+              if(anyActive&&fMatch&&sMatch&&filterActive) card.classList.add('highlighted');
+              if(searchActive&&sMatch) card.classList.add('search-match');
+              if(step.id===selectedId) card.classList.add('selected');
+              card.innerHTML=`
+                <div class="s-id">${step.id}</div>
+                <span class="badge b-${step.type}">${step.type}</span>
+                <div class="s-name">${highlight(step.name,searchQuery)}</div>
+                <div class="s-tags">
+                  ${step.prod.map(p=>`<span class="s-tag prod">${p}</span>`).join('')}
+                  ${step.chan.map(c=>`<span class="s-tag chan">${c}</span>`).join('')}
+                </div>`;
+              card.addEventListener('click',()=>openPanel(step));
+              // 호버 시 이 카드와 직접 연결된 화살표만 강조
+              card.addEventListener('mouseenter',()=>{
+                hoverId=step.id;
+                card.classList.add('hover-focus');
+                requestAnimationFrame(drawArrows);
+              });
+              card.addEventListener('mouseleave',()=>{
+                hoverId=null;
+                card.classList.remove('hover-focus');
+                requestAnimationFrame(drawArrows);
+              });
+              wrap.appendChild(card);
+            });
+            td.appendChild(wrap);
+          }
+          tr.appendChild(td);
+        });
+      });
+      tbody.appendChild(tr);
+    }
+    if(depts.indexOf(dept)<depts.length-1){
+      const sepTr=document.createElement('tr');
+      const sepTd=document.createElement('td');
+      sepTd.colSpan=groups.reduce((sum,g)=>sum+grpCols[g].length,0)+1;
+      sepTd.style.cssText='height:4px;background:#d1d5db;padding:0;';
+      sepTr.appendChild(sepTd);tbody.appendChild(sepTr);
+    }
+  });
+  tbl.appendChild(tbody);
+  inner.appendChild(tbl);
+  inner.style.position='relative';
+  const arrowSvg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  arrowSvg.id='arrowLayer';
+  arrowSvg.style.cssText='position:absolute;top:0;left:0;pointer-events:none;overflow:visible;z-index:30;';
+  inner.appendChild(arrowSvg);
+  scrollDiv.appendChild(inner);main.appendChild(scrollDiv);
+  scrollDiv.addEventListener('scroll',()=>requestAnimationFrame(drawArrows));
+  requestAnimationFrame(drawArrows);
+}
+
+/* ── 카드 변(top/bottom/left/right)의 앵커 좌표 + 바깥 방향 normal
+   offsetIndex/offsetCount: 같은 변에서 여러 화살표가 나가거나 들어올 때 겹치지 않도록 분산 배치 ── */
+function anchorPoint(card,side,innerRect,offsetIndex=0,offsetCount=1){
+  const r=card.getBoundingClientRect();
+  const x0=r.left-innerRect.left, y0=r.top-innerRect.top;
+  const cx=x0+r.width/2, cy=y0+r.height/2;
+  const SPREAD_GAP=10; // px 간격
+  const spread = offsetCount>1 ? (offsetIndex-(offsetCount-1)/2)*SPREAD_GAP : 0;
+  switch(side){
+    case 'top':    return {x:cx+spread, y:y0,          nx:0, ny:-1};
+    case 'bottom': return {x:cx+spread, y:y0+r.height, nx:0, ny:1};
+    case 'left':   return {x:x0,        y:cy+spread,   nx:-1,ny:0};
+    default:       return {x:x0+r.width,y:cy+spread,   nx:1, ny:0}; // right(기본)
+  }
+}
+
+/* ── 카드 A(from)와 B(to)의 상대 위치를 보고 자연스러운 out/in 변을 자동 계산.
+   시트에 받는/보내는 화살표 값이 지정돼 있으면 그 값이 우선 적용되고,
+   비어있는 경우에만 이 자동 계산값을 사용한다. ── */
+function autoSide(rA,rB){
+  const dx=(rB.left+rB.width/2)-(rA.left+rA.width/2);
+  const dy=(rB.top+rB.height/2)-(rA.top+rA.height/2);
+  if(Math.abs(dx)>=Math.abs(dy)){
+    return dx>=0 ? ['right','left'] : ['left','right'];
+  }else{
+    return dy>=0 ? ['bottom','top'] : ['top','bottom'];
+  }
+}
+
+/* ── 화살표 그리기 ── */
+function drawArrows(){
+  const svg=document.getElementById('arrowLayer');
+  if(!svg) return;
+  const inner=svg.parentElement;
+  const w=inner.scrollWidth, h=inner.scrollHeight;
+  svg.setAttribute('width',w); svg.setAttribute('height',h);
+  svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+  svg.innerHTML=`<defs>
+    <marker id="arw" viewBox="0 0 10 10" markerWidth="7" markerHeight="7"
+      refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="context-stroke"/></marker>
+    <marker id="arwFocus" viewBox="0 0 10 10" markerWidth="8" markerHeight="8"
+      refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="context-stroke"/></marker>
+  </defs>`;
+  const innerRect=inner.getBoundingClientRect();
+  const cardById={};
+  document.querySelectorAll('.step-card').forEach(c=>cardById[c.dataset.id]=c);
+
+  const anyFilterActive=activeProd.size>0||activeChan.size>0||!!searchQuery;
+  const activeFocus=hoverId||selectedId; // 호버가 최우선, 없으면 선택된 카드 기준
+
+  // prev/next 양쪽에서 엣지 수집 후 중복 제거 (from>to)
+  const seen=new Set(), rawEdges=[];
+  steps.forEach(s=>{
+    s.next.forEach(t=>{const k=s.id+'>'+t; if(!seen.has(k)){seen.add(k);rawEdges.push([s.id,t]);}});
+    s.prev.forEach(p=>{const k=p+'>'+s.id; if(!seen.has(k)){seen.add(k);rawEdges.push([p,s.id]);}});
+  });
+
+  // 각 엣지의 실제 out/in 변 계산 (시트값 우선 → 없으면 자동 계산)
+  const resolved=rawEdges.map(([fromId,toId])=>{
+    const A=cardById[fromId], B=cardById[toId];
+    if(!A||!B) return null;
+    const sFrom=steps.find(s=>s.id===fromId), sTo=steps.find(s=>s.id===toId);
+    if(!sFrom||!sTo) return null;
+    const rA=A.getBoundingClientRect(), rB=B.getBoundingClientRect();
+    const [autoOut,autoIn]=autoSide(rA,rB);
+    return {fromId,toId,A,B,sFrom,sTo,outSide:sFrom.outSide||autoOut,inSide:sTo.inSide||autoIn};
+  }).filter(Boolean);
+
+  // 같은 카드+같은 변을 공유하는 엣지들을 그룹핑 → 분산 오프셋 인덱스 부여
+  const outGroups={}, inGroups={};
+  resolved.forEach(e=>{
+    const ok=e.fromId+'|'+e.outSide; (outGroups[ok]=outGroups[ok]||[]).push(e);
+    const ik=e.toId+'|'+e.inSide; (inGroups[ik]=inGroups[ik]||[]).push(e);
+  });
+  Object.values(outGroups).forEach(grp=>grp.forEach((e,i)=>e._outIdx=[i,grp.length]));
+  Object.values(inGroups).forEach(grp=>grp.forEach((e,i)=>e._inIdx=[i,grp.length]));
+
+  resolved.forEach(e=>{
+    const {fromId,toId,A,B,sFrom,outSide,inSide}=e;
+    const [oi,oc]=e._outIdx, [ii,ic]=e._inIdx;
+    const a=anchorPoint(A,outSide,innerRect,oi,oc);
+    const b=anchorPoint(B,inSide,innerRect,ii,ic);
+    const dist=Math.hypot(b.x-a.x,b.y-a.y), off=Math.max(34,dist*0.35);
+    const c1x=a.x+a.nx*off, c1y=a.y+a.ny*off, c2x=b.x+b.nx*off, c2y=b.y+b.ny*off;
+
+    const filterDimmed=anyFilterActive&&(A.classList.contains('dimmed')||B.classList.contains('dimmed'));
+    const isFocusEdge=!!activeFocus&&(fromId===activeFocus||toId===activeFocus);
+
+    let opacity,strokeWidth,marker;
+    if(filterDimmed){
+      opacity=0.03; strokeWidth=1.4; marker='url(#arw)';
+    }else if(activeFocus){
+      // 포커스 상태: 연결된 선만 진하게, 나머지는 거의 안 보이게
+      opacity=isFocusEdge?0.95:0.04;
+      strokeWidth=isFocusEdge?2.6:1.1;
+      marker=isFocusEdge?'url(#arwFocus)':'url(#arw)';
+    }else{
+      // 평소 상태: 전체 흐름은 보이되 은은하게
+      opacity=0.4; strokeWidth=1.5; marker='url(#arw)';
+    }
+
+    const col=groupColors[sFrom.g]||'#6B7280';
+    const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+    p.setAttribute('d',`M${a.x},${a.y} C${c1x},${c1y} ${c2x},${c2y} ${b.x},${b.y}`);
+    p.setAttribute('fill','none');
+    p.setAttribute('stroke',col);
+    p.setAttribute('stroke-width',strokeWidth);
+    p.setAttribute('stroke-linecap','round');
+    p.setAttribute('opacity',opacity);
+    p.setAttribute('marker-end',marker);
+    p.style.transition='opacity .15s ease,stroke-width .15s ease';
+    svg.appendChild(p);
+  });
+}
+window.addEventListener('resize',()=>requestAnimationFrame(drawArrows));
+
+function openPanel(step){
+  selectedId=step.id;
+  document.querySelectorAll('.step-card').forEach(c=>c.classList.toggle('selected',c.dataset.id===step.id));
+  const lc=LANE_COLORS[step.dept]||DEFAULT_LANE;
+  document.getElementById('spId').textContent=step.id;
+  document.getElementById('spTitle').textContent=step.name;
+  const prevItems=step.prev.map(id=>{const s=steps.find(x=>x.id===id);return s?{id,name:s.name}:{id,name:''};});
+  const nextItems=step.next.map(id=>{const s=steps.find(x=>x.id===id);return s?{id,name:s.name}:{id,name:''};});
+  document.getElementById('spBody').innerHTML=`
+    <div class="sp-section">
+      <div class="sp-section-label">담당 부서</div>
+      <div class="sp-dept"><div class="sp-dept-dot" style="background:${lc.dot}"></div>${step.dept}</div>
+    </div>
+    <div class="sp-section">
+      <div class="sp-section-label">유형 · 그룹</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span class="sp-badge sp-b-${step.type}">${step.type}</span>
+        <span style="font-size:11px;padding:3px 10px;border-radius:20px;background:${groupColors[step.g]}18;color:${groupColors[step.g]};font-weight:500;">${step.g}</span>
+      </div>
+    </div>
+    ${step.definition?`
+    <div class="sp-section">
+      <div class="sp-section-label">Step Definition</div>
+      <div class="sp-stepdef">${step.definition}</div>
+    </div>`:''}
+    <div class="sp-section">
+      <div class="sp-section-label">적용 범위</div>
+      <div class="sp-tags">
+        ${step.prod.map(p=>`<span class="sp-tag prod">${p}</span>`).join('')}
+        ${step.chan.map(c=>`<span class="sp-tag chan">${c}</span>`).join('')}
+      </div>
+    </div>
+    <div class="sp-section">
+      <div class="sp-section-label">연결 단계</div>
+      <div class="sp-deps">
+        <div class="sp-dep-box">
+          <div class="sp-dep-label">◀ 이전</div>
+          ${prevItems.length?prevItems.map(s=>`<div class="sp-dep-item"><div class="sp-dep-item-id">${s.id}</div>${s.name}</div>`).join(''):'<div class="sp-dep-none">없음</div>'}
+        </div>
+        <div class="sp-dep-box">
+          <div class="sp-dep-label">▶ 다음</div>
+          ${nextItems.length?nextItems.map(s=>`<div class="sp-dep-item"><div class="sp-dep-item-id">${s.id}</div>${s.name}</div>`).join(''):'<div class="sp-dep-none">없음</div>'}
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('sidePanel').classList.add('open');
+  setTimeout(drawArrows,320);
+}
+function closePanel(){
+  selectedId=null;
+  document.getElementById('sidePanel').classList.remove('open');
+  document.querySelectorAll('.step-card').forEach(c=>c.classList.remove('selected'));
+  setTimeout(drawArrows,320);
+}
+
+loadData();
+</script>
+</body>
+</html>
